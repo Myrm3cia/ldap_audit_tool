@@ -1,4 +1,4 @@
-# ldap-audit
+# ldap-audit-tool
 
 Read-only LDAP security posture auditing tool.
 
