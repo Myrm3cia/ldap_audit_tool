@@ -68,6 +68,43 @@ def run_checks(
         logger.debug("Running check: rootdse (LDAP-005)")
         findings.extend(_check_rootdse(dir_info))
 
+    if "ldapcfg" in checks:
+        logger.debug("Running check: ldapcfg (LDAP-006, LDAP-007)")
+        from checks import ldap_config
+        findings.extend(ldap_config.run(
+            connector=connector,
+            host=connector.config.host,
+            port=connector.config.port,
+            bind_dn=connector.config.bind_dn,
+            bind_password=connector.config.bind_password,
+            timeout=connector.config.timeout,
+        ))
+
+    if "kerb" in checks:
+        logger.debug("Running check: kerb (KERB-001 to KERB-004)")
+        from checks import kerberos
+        findings.extend(kerberos.run(dir_info))
+
+    if "acc" in checks:
+        logger.debug("Running check: acc (ACC-001)")
+        from checks import account
+        findings.extend(account.run(dir_info))
+
+    if "priv" in checks:
+        logger.debug("Running check: priv (PRIV-001, PRIV-002)")
+        from checks import privilege
+        findings.extend(privilege.run(connector, dir_info))
+
+    if "comp" in checks:
+        logger.debug("Running check: comp (COMP-001, COMP-002, COMP-003)")
+        from checks import computers
+        findings.extend(computers.run(connector, dir_info))
+
+    if "pol" in checks:
+        logger.debug("Running check: pol (POL-001)")
+        from checks import policy
+        findings.extend(policy.run(connector, dir_info))
+
     # Sort: highest severity first, then by check ID
     findings.sort(
         key=lambda f: (-SEVERITY_ORDER.get(f.severity, 0), f.id),

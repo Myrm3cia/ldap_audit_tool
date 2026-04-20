@@ -24,6 +24,7 @@ from config.settings import (
     USER_OBJECT_CLASSES,
     GROUP_OBJECT_CLASSES,
     USER_ATTRIBUTES,
+    COMPUTER_ATTRIBUTES,
 )
 from core.connector import LDAPConnector, LDAPConnectionResult
 
@@ -88,16 +89,40 @@ class OUEntry:
 
 
 @dataclass
+class ComputerEntry:
+    dn: str
+    attributes: dict = field(default_factory=dict)
+
+    @property
+    def cn(self) -> str:
+        val = self.attributes.get("cn")
+        if isinstance(val, list):
+            return str(val[0]) if val else ""
+        return str(val) if val else ""
+
+    @property
+    def dns_hostname(self) -> str:
+        val = self.attributes.get("dNSHostName")
+        if isinstance(val, list):
+            return str(val[0]) if val else ""
+        return str(val) if val else ""
+
+    def __repr__(self) -> str:
+        return f"ComputerEntry(dn={self.dn!r})"
+
+
+@dataclass
 class DirectoryInfo:
     """All information collected about the directory."""
     base_dn: str
-    naming_contexts: list[str]          = field(default_factory=list)
-    server_info: dict                   = field(default_factory=dict)
-    root_dse: dict                      = field(default_factory=dict)
-    organisational_units: list[OUEntry] = field(default_factory=list)
-    users: list[UserEntry]              = field(default_factory=list)
-    groups: list[GroupEntry]            = field(default_factory=list)
-    errors: list[str]                   = field(default_factory=list)
+    naming_contexts: list[str]            = field(default_factory=list)
+    server_info: dict                     = field(default_factory=dict)
+    root_dse: dict                        = field(default_factory=dict)
+    organisational_units: list[OUEntry]   = field(default_factory=list)
+    users: list[UserEntry]                = field(default_factory=list)
+    groups: list[GroupEntry]              = field(default_factory=list)
+    computers: list[ComputerEntry]        = field(default_factory=list)
+    errors: list[str]                     = field(default_factory=list)
 
     @property
     def user_count(self) -> int:
@@ -110,6 +135,10 @@ class DirectoryInfo:
     @property
     def ou_count(self) -> int:
         return len(self.organisational_units)
+
+    @property
+    def computer_count(self) -> int:
+        return len(self.computers)
 
 
 # ---------------------------------------------------------------------------
@@ -157,14 +186,15 @@ class LDAPEnumerator:
             logger.warning("No base DN; skipping enumeration.")
             return info
 
-        info.root_dse           = self._get_root_dse()
+        info.root_dse             = self._get_root_dse()
         info.organisational_units = self._get_ous(base_dn)
-        info.users              = self._get_users(base_dn)
-        info.groups             = self._get_groups(base_dn)
+        info.users                = self._get_users(base_dn)
+        info.groups               = self._get_groups(base_dn)
+        info.computers            = self._get_computers(base_dn)
 
         logger.info(
-            "Enumeration complete — OUs: %d, users: %d, groups: %d",
-            info.ou_count, info.user_count, info.group_count,
+            "Enumeration complete — OUs: %d, users: %d, groups: %d, computers: %d",
+            info.ou_count, info.user_count, info.group_count, info.computer_count,
         )
         return info
 
@@ -231,6 +261,21 @@ class LDAPEnumerator:
             groups.append(GroupEntry(dn=e.entry_dn, attributes=attrs))
         logger.debug("Found %d group entries", len(groups))
         return groups
+
+    def _get_computers(self, base_dn: str) -> list[ComputerEntry]:
+        entries = self._conn.search(
+            search_base=base_dn,
+            search_filter="(objectClass=computer)",
+            attributes=['*'],
+            search_scope=SUBTREE,
+            size_limit=self._size,
+        )
+        computers = []
+        for e in entries:
+            attrs = self._entry_to_dict(e, COMPUTER_ATTRIBUTES)
+            computers.append(ComputerEntry(dn=e.entry_dn, attributes=attrs))
+        logger.debug("Found %d computer entries", len(computers))
+        return computers
 
     # ------------------------------------------------------------------
     # Utility

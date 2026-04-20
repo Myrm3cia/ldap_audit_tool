@@ -144,7 +144,10 @@ def _resolve_password(args: argparse.Namespace) -> str | None:
 
 
 def _resolve_checks(raw: str) -> set[str]:
-    all_checks = {"anon", "pwpol", "privs", "attrs", "rootdse"}
+    all_checks = {
+        "anon", "pwpol", "privs", "attrs", "rootdse",
+        "ldapcfg", "kerb", "acc", "priv", "comp", "pol",
+    }
     if raw.strip().lower() == "all":
         return all_checks
     selected = {c.strip().lower() for c in raw.split(",")}
@@ -209,9 +212,10 @@ def main() -> int:
     enumerator = LDAPEnumerator(connector, result)
     dir_info = enumerator.enumerate()
 
-    print(f"[+] OUs found:    {dir_info.ou_count}")
-    print(f"[+] Users found:  {dir_info.user_count}")
-    print(f"[+] Groups found: {dir_info.group_count}")
+    print(f"[+] OUs found:       {dir_info.ou_count}")
+    print(f"[+] Users found:     {dir_info.user_count}")
+    print(f"[+] Groups found:    {dir_info.group_count}")
+    print(f"[+] Computers found: {dir_info.computer_count}")
     if dir_info.errors:
         for err in dir_info.errors:
             print(f"[!] {err}", file=sys.stderr)

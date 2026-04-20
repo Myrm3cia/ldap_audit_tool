@@ -137,14 +137,61 @@ USER_ATTRIBUTES = [
     "passwordExpWarning",
     "createTimestamp",
     "modifyTimestamp",
+    # Kerberos / delegation
+    "servicePrincipalName",
+    "msDS-SupportedEncryptionTypes",
+    "msDS-AllowedToDelegateTo",
+    # Account status
+    "pwdLastSet",
+    "lastLogonTimestamp",
+    "lastLogon",
+    # Privilege tracking
+    "adminCount",
+]
+
+# --- Computer attributes to collect ---
+
+COMPUTER_ATTRIBUTES = [
+    "cn",
+    "sAMAccountName",
+    "dNSHostName",
+    "operatingSystem",
+    "operatingSystemVersion",
+    "userAccountControl",
+    "lastLogonTimestamp",
+    "lastLogon",
+    "whenCreated",
+    "memberOf",
+    "msDS-AllowedToDelegateTo",
+    "msDS-SupportedEncryptionTypes",
+    "servicePrincipalName",
 ]
 
 
 # --- Check IDs ---
 
 class CheckID:
+    # LDAP / general
     ANONYMOUS_BIND      = "LDAP-001"
     PASSWORD_POLICY     = "LDAP-002"
     PRIVILEGED_ACCOUNTS = "LDAP-003"
     MISSING_ATTRIBUTES  = "LDAP-004"
     ROOTDSE_EXPOSURE    = "LDAP-005"
+    LDAP_SIGNING        = "LDAP-006"
+    LDAPS_MISSING       = "LDAP-007"
+    # Kerberos
+    ASREP_ROASTING      = "KERB-001"
+    KERBEROASTING       = "KERB-002"
+    WEAK_KERBEROS_CRYPTO = "KERB-003"
+    DELEGATION          = "KERB-004"
+    # Account
+    PASSWORD_AGE        = "ACC-001"
+    # Privilege
+    NESTED_GROUPS       = "PRIV-001"
+    ADMINSDHOLDER       = "PRIV-002"
+    # Computer
+    STALE_COMPUTERS     = "COMP-001"
+    COMPUTER_DELEGATION = "COMP-002"
+    DOMAIN_TRUSTS       = "COMP-003"
+    # Policy
+    KERBEROS_POLICY     = "POL-001"
