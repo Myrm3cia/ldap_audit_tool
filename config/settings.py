@@ -31,7 +31,8 @@ SEVERITY_COLORS = {
     Severity.LOW:      "\033[36m",     # cyan
     Severity.INFO:     "\033[37m",     # white
 }
-COLOR_RESET = "\033[0m"
+COLOR_RESET   = "\033[0m"
+COLOR_WARNING = "\033[93m"   # bright yellow — used for [!] messages
 
 
 # --- Default ports ---

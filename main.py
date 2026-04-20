@@ -19,7 +19,7 @@ import logging
 import sys
 from pathlib import Path
 
-from config.settings import DEFAULT_LDAP_PORT, DEFAULT_LDAPS_PORT, SEVERITY_COLORS, COLOR_RESET, Severity
+from config.settings import DEFAULT_LDAP_PORT, DEFAULT_LDAPS_PORT, SEVERITY_COLORS, COLOR_RESET, COLOR_WARNING, Severity
 from core.connector import LDAPConnectionConfig, LDAPConnector
 from core.enumerator import LDAPEnumerator
 from core.analyzer import run_checks
@@ -118,8 +118,8 @@ Examples:
 
     # --- Output ---
     out = parser.add_argument_group("Output")
-    out.add_argument("--format", choices=["json", "txt", "html", "all"], default="json",
-                     help="Report format: json, txt, html, all (json+txt+html) (default: json).")
+    out.add_argument("--format", choices=["json", "txt", "html", "all"], default=None,
+                     help="Report format: json, txt, html, all (json+txt+html). Required when --output is set.")
     out.add_argument("--output", metavar="PATH",
                      help="Output file path without extension (e.g. ./report). "
                           "If omitted, report is printed to stdout.")
@@ -153,7 +153,7 @@ def _resolve_checks(raw: str) -> set[str]:
     selected = {c.strip().lower() for c in raw.split(",")}
     unknown = selected - all_checks
     if unknown:
-        print(f"[!] Unknown checks ignored: {', '.join(sorted(unknown))}", file=sys.stderr)
+        print(f"{COLOR_WARNING}[!] Unknown checks ignored: {', '.join(sorted(unknown))}{COLOR_RESET}", file=sys.stderr)
     return selected & all_checks
 
 
@@ -167,10 +167,18 @@ def main() -> int:
 
     _setup_logging(args.verbose)
 
+    # Validate: --format requires --output and vice-versa
+    if args.output and not args.format:
+        print(f"{COLOR_WARNING}[!] --output requires --format (json, txt, html, all).{COLOR_RESET}", file=sys.stderr)
+        return 1
+    if args.format and not args.output:
+        print(f"{COLOR_WARNING}[!] --format requires --output (specify a file path).{COLOR_RESET}", file=sys.stderr)
+        return 1
+
     # Validate: if bind-dn is set, a password must be supplied somehow
     if args.bind_dn and not args.bind_password and not args.ask_password:
         print(
-            "[!] --bind-dn requires either --bind-password or --ask-password.",
+            f"{COLOR_WARNING}[!] --bind-dn requires either --bind-password or --ask-password.{COLOR_RESET}",
             file=sys.stderr,
         )
         return 1
@@ -197,7 +205,7 @@ def main() -> int:
     result = connector.connect()
 
     if not result.success:
-        print(f"[!] Connection failed: {result.error}", file=sys.stderr)
+        print(f"{COLOR_WARNING}[!] Connection failed: {result.error}{COLOR_RESET}", file=sys.stderr)
         return 1
 
     bind_type = "anonymous" if result.anonymous else f"as {args.bind_dn}"
@@ -218,7 +226,13 @@ def main() -> int:
     print(f"[+] Computers found: {dir_info.computer_count}")
     if dir_info.errors:
         for err in dir_info.errors:
-            print(f"[!] {err}", file=sys.stderr)
+            print(f"{COLOR_WARNING}[!] {err}{COLOR_RESET}", file=sys.stderr)
+    if connector.auth_denied_count > 0:
+        print(
+            f"{COLOR_WARNING}[!] {connector.auth_denied_count} search(es) blocked by the server: "
+            f"anonymous access is insufficient. Use --bind-dn and --ask-password for complete results.{COLOR_RESET}",
+            file=sys.stderr,
+        )
 
     # --- Run checks ---
     print(f"[*] Running checks: {', '.join(sorted(checks))}")
@@ -231,7 +245,7 @@ def main() -> int:
     if not findings:
         print("[+] No issues found.")
     else:
-        print(f"[!] {len(findings)} finding(s):\n")
+        print(f"{COLOR_WARNING}[!] {len(findings)} finding(s):{COLOR_RESET}\n")
         for f in findings:
             color = SEVERITY_COLORS.get(f.severity, "")
             print(f"  {color}[{f.severity.value}]{COLOR_RESET} {f.id} — {f.title}")
@@ -247,7 +261,7 @@ def main() -> int:
     ))
 
     # --- Write report file (if requested) ---
-    if args.output or args.format in ("json", "txt", "html", "all"):
+    if args.output and args.format:
         write_report(
             findings=findings,
             dir_info=dir_info,

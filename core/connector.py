@@ -83,6 +83,7 @@ class LDAPConnector:
         self.config = config
         self._server: Optional[Server] = None
         self._conn: Optional[Connection] = None
+        self.auth_denied_count: int = 0  # searches blocked due to incomplete bind
 
     # ------------------------------------------------------------------
     # Public API
@@ -176,6 +177,9 @@ class LDAPConnector:
             # Log at DEBUG to avoid noise; everything else is a real WARNING.
             if "invalid class" in exc_str or "invalid attribute type" in exc_str:
                 logger.debug("Search skipped (%s): %s", search_filter, exc)
+            elif "000004DC" in exc_str or "must be completed" in exc_str:
+                self.auth_denied_count += 1
+                logger.debug("Search blocked (auth required) (%s): %s", search_filter, exc)
             else:
                 logger.warning("Search failed (%s): %s", search_filter, exc)
             return []
@@ -245,7 +249,7 @@ class LDAPConnector:
             use_ssl=self.config.use_ssl,
             tls=tls,
             connect_timeout=self.config.timeout,
-            get_info=ldap3.ALL,
+            get_info=ldap3.DSA,
         )
 
     def _build_connection(self) -> Connection:

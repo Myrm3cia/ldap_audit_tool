@@ -93,8 +93,8 @@ Available check groups:
 ### Output
 | Flag | Description |
 |---|---|
-| `--format` | `json` \| `txt` \| `html` \| `all` (default: `json`) |
-| `--output` | Base path without extension (e.g. `./report`). Omit to print to stdout. |
+| `--format` | `json` \| `txt` \| `html` \| `all` — required together with `--output` |
+| `--output` | Base path without extension (e.g. `./report`) — required together with `--format` |
 | `--verbose` | Enable debug-level logging |
 
 ## Output formats
